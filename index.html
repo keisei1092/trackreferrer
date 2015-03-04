@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+
+	<head>
+
+		<meta http-equiv="Content-Type" content="text/html"; charset="UTF-8" />
+		<meta http-equiv="Content-Style-Type" content="text/css" />
+		<meta http-equiv="Content-Script-Type" content="text/javascript" />
+
+		<title>trackreferrer | ミライトアルマチ構想</title>
+
+	</head>
+
+	<body>
+
+		<script>
+
+			window.onload = init;
+			var context;
+			var bufferLoader;
+			var sources = [
+							'./transcreate01.wav',
+							'./transcreate02.wav',
+							'./transcreate03.wav',
+							'./transcreate04.wav',
+							'./transcreate05.wav',
+							'./transcreate06.wav',
+							'./transcreate07.wav',
+							'./transcreate08.wav',
+							'./transcreate09.wav',
+							'./transcreate10.wav'
+							];
+
+			function init() {
+				context = new webkitAudioContext();
+				bufferLoader = new BufferLoader(context,sources,function(){console.log("finish load.");});
+				bufferLoader.load();
+			}
+
+			var node = [];
+			function play(num) {
+				node[num] = playSound(bufferLoader.bufferList[num]);
+				console.log("play track no." + (num+1));
+			}
+
+			function stop(num) {
+				node[num].stop(0);
+				console.log("stop track no." + (num+1));
+			}
+
+			function mute(num) {
+				if (node[num].gain.value == 0) {
+					node[num].gain.value = 1; // unmute
+					console.log("unmute track no." + (num+1));
+				} else {
+					node[num].gain.value = 0; // mute
+					console.log("mute track no." + (num+1));
+				}
+				
+			}
+
+			function playAll() {
+				for (var i = 0; i < sources.length; i ++) {
+					play(i);
+				}
+				console.log("play all track");
+			}
+
+			function stopAll() {
+				for (var i = 0; i < sources.length; i ++) {
+					node[i].stop(0);
+				}
+				console.log("stop all tracks");
+			}
+
+			function playSound(buffer) {
+				var source = context.createBufferSource();
+				source.gain.value = 1;
+				source.buffer = buffer;
+				source.loop = false;
+				source.connect(context.destination);
+				source.start(0);
+
+				return source;
+			}
+
+			/* start bufferLoader class */
+
+				function BufferLoader(context, urlList, callback) {
+					  this.context = context;
+					  this.urlList = urlList;
+					  this.onload = callback;
+					  this.bufferList = new Array();
+					  this.loadCount = 0;
+					}
+
+				BufferLoader.prototype.loadBuffer = function(url, index) {
+					// Load buffer asynchronously
+					var request = new XMLHttpRequest();
+					request.open("GET", url, true);
+					request.responseType = "arraybuffer";
+
+					var loader = this;
+
+					request.onload = function() {
+					  // Asynchronously decode the audio file data in request.response
+					  loader.context.decodeAudioData(
+					    request.response,
+					    function(buffer) {
+					      if (!buffer) {
+					        alert('error decoding file data: ' + url);
+					        return;
+					      }
+					      loader.bufferList[index] = buffer;
+					      if (++loader.loadCount == loader.urlList.length)
+					        loader.onload(loader.bufferList);
+					    },
+					    function(error) {
+					      console.error('decodeAudioData error', error);
+					    }
+					  );
+					}
+
+					request.onerror = function() {
+					  alert('BufferLoader: XHR error');
+					}
+
+					request.send();
+				}
+
+				BufferLoader.prototype.load = function() {
+				  for (var i = 0; i < this.urlList.length; ++i)
+					this.loadBuffer(this.urlList[i], i);
+				}
+
+			/* end of bufferLoader class */
+
+		</script>
+
+		<p>
+			<input type="button" value="playAll" onclick="playAll()" />
+			<input type="button" value="stopAll" onclick="stopAll()" />（38MBダウンロードするまで再生できません，2〜30秒ほどお待ち頂くか，コンソールを開いて"finished load."が出てから押して下さい．）
+		</p>
+
+		<p>
+			<input type="button" value="Sawtooth + E.Piano" onclick="mute(0)" /><br />
+			<input type="button" value="Bass" onclick="mute(1)" /><br />
+			<input type="button" value="Synth Riff and Solo" onclick="mute(2)" /><br />
+			<input type="button" value="Synth Riff 2 + Pump Pad + Strings + Piano" onclick="mute(3)" /><br />
+			<input type="button" value="Vocal" onclick="mute(4)" /><br />
+			<input type="button" value="Chorus" onclick="mute(5)" /><br />
+			<input type="button" value="Kick (Bass Drum)" onclick="mute(6)" /><br />
+			<input type="button" value="Snare, Hand Clap, HiHat" onclick="mute(7)" /><br />
+			<input type="button" value="HiHat" onclick="mute(8)" /><br />
+			<input type="button" value="Percussions, Sound Effects" onclick="mute(9)" />
+		</p>
+
+		<p>
+			trans-Create (feat. 初音ミク)<br />
+			<a href="http://www.nicovideo.jp/watch/sm20028286">http://www.nicovideo.jp/watch/sm20028286</a><br />
+			lyric,music,arrange: keisei (<a href="http://miraitoarumachi.com/">http://miraitoarumachi.com/</a>)<br />
+			96kbps, 32Khz, 全容量 約 38MB（音質悪くてすみませんorz）
+		</p>
+
+		<p>
+			trackreferrerは，曲を楽器グループ（楽器）ごとに参照できるHTML5 アプリケーションです．<br />
+			曲を”解剖”することで，普段よく分からない楽曲の構造の”見える”化に貢献することを最終目標にしています，<br />
+			<span style="color:red">webkit系のブラウザでないと動かない可能性があります</span>（動作確認: Mac OS X 10.9.2 Google Chrome 33.0.1750.146, Windows 7 Professional Google Chrome 33.0.1750.146m）<br />
+			<b>押しても反応がない場合は，ブラウザのコンソール（デベロッパーツール）を開いて”finished load."の表示があるまでそのままお待ちください．</b>
+			最初にplayAllを押下してください．その後，Instrumentの名前が書かれたボタンを押下するとミュートできます．<br />
+			ブラウザのコンソールで途中経過が見られます．
+		</p>
+
+		<p>
+			This program is proudly powered by <a href="http://www.html5rocks.com/ja/tutorials/webaudio/intro/">Web Audio API</a><br />
+			このページのスクリプトは自由に利用して頂いて構いません．なおbufferLoaderクラスの著作権は<a href="http://www.html5rocks.com/ja/tutorials/webaudio/intro/js/buffer-loader.js">こちら</a>の制作者様に帰属します．<br />
+			このスクリプト内の音源について，ここで試聴される以外の一切の転載，販売その他行為を禁じます．<br />
+
+			&copy; 2014 keisei
+		</p>
+
+		<p>
+			ミクの日おめでとう．もっとたくさんの人の歌を歌える世界へ 2014.3.10 0:30:26
+		</p>
+
+	</body>
+
+</html>
